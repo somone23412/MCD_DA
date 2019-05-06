@@ -1,11 +1,13 @@
 import numpy as np
 import gzip
-import cPickle
-
+## cPickle是python2的库，到python3，改名为pickle
+# import cPickle
+import pickle
 
 def load_usps(all_use=False):
     f = gzip.open('data/usps_28x28.pkl', 'rb')
-    data_set = cPickle.load(f)
+    # data_set = cPickle.load(f)
+    data_set = pickle.load(f, encoding='iso-8859-1')
     f.close()
     img_train = data_set[0][0]
     label_train = data_set[0][1]

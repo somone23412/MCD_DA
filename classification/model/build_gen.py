@@ -1,11 +1,12 @@
 import svhn2mnist
-import usps
+import usps_model
 import syn2gtrsb
-import syndig2svhn
+## where is that?
+# import syndig2svhn
 
 def Generator(source, target, pixelda=False):
     if source == 'usps' or target == 'usps':
-        return usps.Feature()
+        return usps_model.Feature()
     elif source == 'svhn':
         return svhn2mnist.Feature()
     elif source == 'synth':
@@ -14,7 +15,7 @@ def Generator(source, target, pixelda=False):
 
 def Classifier(source, target):
     if source == 'usps' or target == 'usps':
-        return usps.Predictor()
+        return usps_model.Predictor()
     if source == 'svhn':
         return svhn2mnist.Predictor()
     if source == 'synth':

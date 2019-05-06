@@ -1,5 +1,6 @@
 import numpy as np
-import cPickle as pkl
+# import cPickle as pkl
+import pickle as pkl
 
 def load_syntraffic():
     data_source = pkl.load(open('../data/data_synthetic'))

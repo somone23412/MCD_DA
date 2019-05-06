@@ -1,6 +1,6 @@
 import numpy as np
-import cPickle as pkl
-
+#import cPickle as pkl
+import pickle as pkl
 def load_gtsrb():
     data_target = pkl.load(open('../data/data_gtsrb'))
     target_train = np.random.permutation(len(data_target['image']))
