@@ -81,7 +81,7 @@ def main():
         os.mkdir(args.checkpoint_dir)
     if not os.path.exists('record'):
         os.mkdir('record')
-    print('record_train: ', record_train, '\nrecord_test: ', record_test)
+    print('[record_train]\t', record_train, '\n[record_test]\t', record_test)
     if args.eval_only:
         solver.test(0)
     else:

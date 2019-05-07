@@ -25,7 +25,7 @@ def return_dataset(data, scale=False, usps=False, all_use='no'):
     if data == 'gtsrb':
         train_image, train_label, \
         test_image, test_label = load_gtsrb()
-    print(data, ": ", train_image.shape)
+    print(data, "\t[train]\t", train_image.shape, "\t[test]\t", test_image.shape)
     return train_image, train_label, test_image, test_label
 
 
