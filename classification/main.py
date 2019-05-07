@@ -33,12 +33,9 @@ parser.add_argument('--save_model', action='store_true', default=False,
                     help='save_model or not')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-# parser.add_argument('--source', type=str, default='svhn', metavar='N',
-#                     help='source dataset')
-# parser.add_argument('--target', type=str, default='mnist', metavar='N', help='target dataset')
-parser.add_argument('--source', type=str, default='usps', metavar='N',
+parser.add_argument('--source', type=str, default='svhn', metavar='N',
                     help='source dataset')
-parser.add_argument('--target', type=str, default='usps', metavar='N', help='target dataset')
+parser.add_argument('--target', type=str, default='mnist', metavar='N', help='target dataset')
 parser.add_argument('--use_abs_diff', action='store_true', default=False,
                     help='use absolute difference value as a measurement')
 args = parser.parse_args()
@@ -80,15 +77,17 @@ def main():
                 args.source, args.target, args.num_k, args.one_step, record_num)
             record_test = 'record/%s_%s_k_%s_onestep_%s_%s_test.txt' % (
                 args.source, args.target, args.num_k, args.one_step, record_num)
-
     if not os.path.exists(args.checkpoint_dir):
         os.mkdir(args.checkpoint_dir)
     if not os.path.exists('record'):
         os.mkdir('record')
+    print('record_train: ', record_train, '\nrecord_test: ', record_test)
     if args.eval_only:
         solver.test(0)
     else:
         count = 0
+        ## training
+        print("start training")
         for t in range(args.max_epoch):
             if not args.one_step:
                 num = solver.train(t, record_file=record_train)
