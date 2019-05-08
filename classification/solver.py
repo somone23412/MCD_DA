@@ -168,7 +168,7 @@ class Solver(object):
                 self.opt_g.step()
                 self.reset_grad()
 
-            if batch_idx > 500:
+            if batch_idx > 13:
                 return batch_idx
 
             ## print log info

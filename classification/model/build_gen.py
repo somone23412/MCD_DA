@@ -1,6 +1,6 @@
-import svhn2mnist
-import usps_model
-import syn2gtrsb
+from model import svhn2mnist
+from model import usps_model
+from model import syn2gtrsb
 ## where is that?
 # import syndig2svhn
 

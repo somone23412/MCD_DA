@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from grad_reverse import grad_reverse
+from model.grad_reverse import grad_reverse
 
 
 class Feature(nn.Module):

@@ -1,12 +1,12 @@
 import sys
 
 sys.path.append('../loader')
-from unaligned_data_loader import UnalignedDataLoader
-from svhn import load_svhn
-from mnist import load_mnist
-from usps import load_usps
-from gtsrb import load_gtsrb
-from synth_traffic import load_syntraffic
+from datasets.unaligned_data_loader import UnalignedDataLoader
+from datasets.svhn import load_svhn
+from datasets.mnist import load_mnist
+from datasets.usps import load_usps
+from datasets.gtsrb import load_gtsrb
+from datasets.synth_traffic import load_syntraffic
 
 
 def return_dataset(data, scale=False, usps=False, all_use='no'):
