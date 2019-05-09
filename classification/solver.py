@@ -94,6 +94,22 @@ class Solver(object):
     def discrepancy(self, out1, out2):
         return torch.mean(torch.abs(F.softmax(out1, dim=1) - F.softmax(out2, dim=1)))
 
+    ## gaussian kernel for mmd
+    def guassian_kernel(self, source, target, kernel_mul=2.0, kernel_num=5, fix_sigma=None):
+        n_samples = int(source.size()[0]) + int(target.size()[0])
+        total = torch.cat([source, target], dim=0)
+        total0 = total.unsqueeze(0).expand(int(total.size(0)), int(total.size(0)), int(total.size(1)))
+        total1 = total.unsqueeze(1).expand(int(total.size(0)), int(total.size(0)), int(total.size(1)))
+        L2_distance = ((total0 - total1) ** 2).sum(2)
+        if fix_sigma:
+            bandwidth = fix_sigma
+        else:
+            bandwidth = torch.sum(L2_distance.data) / (n_samples ** 2 - n_samples)
+        bandwidth /= kernel_mul ** (kernel_num // 2)
+        bandwidth_list = [bandwidth * (kernel_mul ** i) for i in range(kernel_num)]
+        kernel_val = [torch.exp(-L2_distance / bandwidth_temp) for bandwidth_temp in bandwidth_list]
+        return sum(kernel_val)  # /len(kernel_val)
+
     def train(self, epoch, record_file=None):
         ## cross entropy loss
         criterion = nn.CrossEntropyLoss().cuda()
@@ -158,17 +174,45 @@ class Solver(object):
             self.opt_c2.step()
             self.reset_grad()
 
-            ##STEP C: train the generator to minimize the discrepancy for fixed classifiers
+            ## STEP C: train the generator to minimize the discrepancy for fixed classifiers
             for i in range(self.num_k):
+
                 feat_t = self.G(img_t)
                 output_t1 = self.C1(feat_t)
                 output_t2 = self.C2(feat_t)
+
                 loss_dis = self.discrepancy(output_t1, output_t2)
                 loss_dis.backward()
                 self.opt_g.step()
                 self.reset_grad()
 
-            if batch_idx > 13:
+            ## STEP D: mmd
+            feat_t = self.G(img_t)
+            output_t1 = self.C1(feat_t)
+            output_t2 = self.C2(feat_t)
+            feat_s = self.G(img_s)
+            output_s1 = self.C1(feat_s)
+            output_s2 = self.C2(feat_s)
+            batch_size = self.batch_size
+            kernels1 = self.guassian_kernel(output_s1, output_t1)
+            kernels2 = self.guassian_kernel(output_s2, output_t2)
+            tmploss1 = 0
+            tmploss2 = 0
+            for i in range(batch_size):
+                s1, s2 = i, (i + 1) % batch_size
+                t1, t2 = s1 + batch_size, s2 + batch_size
+                tmploss1 += kernels1[s1, s2] + kernels1[t1, t2]
+                tmploss1 -= kernels1[s1, t2] + kernels1[s2, t1]
+                tmploss2 += kernels2[s1, s2] + kernels2[t1, t2]
+                tmploss2 -= kernels2[s1, t2] + kernels2[s2, t1]
+            mmd_loss = (tmploss1 + tmploss2) / (2 * float(batch_size))
+            mmd_loss.backward()
+            self.opt_c1.step()
+            self.opt_c2.step()
+            self.reset_grad()
+
+            ## max iterations per one epoch
+            if batch_idx > 500:
                 return batch_idx
 
             ## print log info
