@@ -164,40 +164,13 @@ class Solver(object):
             feat_t = self.G(img_t)
             output_t1 = self.C1(feat_t)
             output_t2 = self.C2(feat_t)
-            loss_s1 = criterion(output_s1, label_s)
-            loss_s2 = criterion(output_s2, label_s)
-            loss_s = loss_s1 + loss_s2
-            loss_dis = self.discrepancy(output_t1, output_t2)
-            loss = loss_s - loss_dis
-            loss.backward()
-            self.opt_c1.step()
-            self.opt_c2.step()
-            self.reset_grad()
-
-            ## STEP C: train the generator to minimize the discrepancy for fixed classifiers
-            for i in range(self.num_k):
-
-                feat_t = self.G(img_t)
-                output_t1 = self.C1(feat_t)
-                output_t2 = self.C2(feat_t)
-
-                loss_dis = self.discrepancy(output_t1, output_t2)
-                loss_dis.backward()
-                self.opt_g.step()
-                self.reset_grad()
-
-            ## STEP D: mmd
-            feat_t = self.G(img_t)
-            output_t1 = self.C1(feat_t)
-            output_t2 = self.C2(feat_t)
-            feat_s = self.G(img_s)
-            output_s1 = self.C1(feat_s)
-            output_s2 = self.C2(feat_s)
+            ## mmd
             batch_size = self.batch_size
             kernels1 = self.guassian_kernel(output_s1, output_t1)
             kernels2 = self.guassian_kernel(output_s2, output_t2)
             tmploss1 = 0
             tmploss2 = 0
+            trade_off = 0.5
             for i in range(batch_size):
                 s1, s2 = i, (i + 1) % batch_size
                 t1, t2 = s1 + batch_size, s2 + batch_size
@@ -206,10 +179,25 @@ class Solver(object):
                 tmploss2 += kernels2[s1, s2] + kernels2[t1, t2]
                 tmploss2 -= kernels2[s1, t2] + kernels2[s2, t1]
             mmd_loss = (tmploss1 + tmploss2) / (2 * float(batch_size))
-            mmd_loss.backward()
+            loss_s1 = criterion(output_s1, label_s)
+            loss_s2 = criterion(output_s2, label_s)
+            loss_s = loss_s1 + loss_s2
+            loss_dis = self.discrepancy(output_t1, output_t2)
+            loss = loss_s - loss_dis + trade_off * mmd_loss
+            loss.backward()
             self.opt_c1.step()
             self.opt_c2.step()
             self.reset_grad()
+
+            ## STEP C: train the generator to minimize the discrepancy for fixed classifiers
+            for i in range(self.num_k):
+                feat_t = self.G(img_t)
+                output_t1 = self.C1(feat_t)
+                output_t2 = self.C2(feat_t)
+                loss_dis = self.discrepancy(output_t1, output_t2)
+                loss_dis.backward()
+                self.opt_g.step()
+                self.reset_grad()
 
             ## max iterations per one epoch
             if batch_idx > 500:
