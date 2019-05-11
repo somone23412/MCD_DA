@@ -40,6 +40,7 @@ parser.add_argument('--use_abs_diff', action='store_true', default=False,
                     help='use absolute difference value as a measurement')
 parser.add_argument('--gpu_id', type=str, nargs='?', default='0', help="device id to run")
 args = parser.parse_args()
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 torch.manual_seed(args.seed)
 if args.cuda:
@@ -48,7 +49,6 @@ print(args)
 
 
 def main():
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     # if not args.one_step:
 
     solver = Solver(args, source=args.source, target=args.target, learning_rate=args.lr, batch_size=args.batch_size,
