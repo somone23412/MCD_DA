@@ -7,7 +7,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 import numpy as np
-from utils import *
+from visda_utils import *
 from taskcv_loader import CVDataLoader
 from basenet import *
 import torch.nn.functional as F
@@ -40,9 +40,9 @@ parser.add_argument('--name', type=str, default='board', metavar='B',
                     help='board dir')
 parser.add_argument('--save', type=str, default='save/mcd', metavar='B',
                     help='board dir')
-parser.add_argument('--train_path', type=str, default='', metavar='B',
+parser.add_argument('--train_path', type=str, default='visda_datasets/train', metavar='B',
                     help='directory of source datasets')
-parser.add_argument('--val_path', type=str, default='', metavar='B',
+parser.add_argument('--val_path', type=str, default='visda_datasets/validation', metavar='B',
                     help='directory of target datasets')
 parser.add_argument('--resnet', type=str, default='101', metavar='B',
                     help='which resnet 18,50,101,152,200')
@@ -206,6 +206,7 @@ def train(num_epoch):
                 F2.train()
 
 def test(epoch):
+    val = False;
     G.eval()
     F1.eval()
     F2.eval()

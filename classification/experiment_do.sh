@@ -14,5 +14,5 @@ ALLU=$5
 GPUID=$6
 for i in `seq 1 5`
 do
-CUDA_VISIBLE_DEVICES=${GPUID} python main.py --source ${SOURCE} --target ${TARGET} --num_k ${NUMK} --max_epoch ${EPOCH} --all_use ${ALLU}
+    CUDA_VISIBLE_DEVICES=${GPUID} python main.py --source ${SOURCE} --target ${TARGET} --num_k ${NUMK} --max_epoch ${EPOCH} --all_use ${ALLU}
 done
