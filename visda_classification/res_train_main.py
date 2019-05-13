@@ -12,6 +12,7 @@ from taskcv_loader import CVDataLoader
 from basenet import *
 import torch.nn.functional as F
 import os
+
 # Training settings
 parser = argparse.ArgumentParser(description='Visda Classification')
 parser.add_argument('--batch-size', type=int, default=32, metavar='N',
@@ -38,7 +39,7 @@ parser.add_argument('--num-layer', type=int, default=2, metavar='K',
                     help='how many layers for classifier')
 parser.add_argument('--name', type=str, default='board', metavar='B',
                     help='board dir')
-parser.add_argument('--save', type=str, default='save/mcd', metavar='B',
+parser.add_argument('--save', type=str, default='save', metavar='B',
                     help='board dir')
 parser.add_argument('--train_path', type=str, default='visda_datasets/train', metavar='B',
                     help='directory of source datasets')
@@ -54,40 +55,41 @@ val_path = args.val_path
 num_k = args.num_k
 num_layer = args.num_layer
 batch_size = args.batch_size
-save_path = args.save+'_'+str(args.num_k)
-
+if not os.path.exists(args.save):
+    os.mkdir(args.save)
+save_path = args.save + '_' + str(args.num_k)
 data_transforms = {
     train_path: transforms.Compose([
-        transforms.Scale(256),
+        transforms.Resize(256),
         transforms.RandomHorizontalFlip(),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
     val_path: transforms.Compose([
-        transforms.Scale(256),
+        transforms.Resize(256),
         transforms.RandomHorizontalFlip(),
         transforms.CenterCrop(224),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ]),
 }
-dsets = {x: datasets.ImageFolder(os.path.join(x), data_transforms[x]) for x in [train_path,val_path]}
+dsets = {x: datasets.ImageFolder(os.path.join(x), data_transforms[x]) for x in [train_path, val_path]}
 dset_sizes = {x: len(dsets[x]) for x in [train_path, val_path]}
-dset_classes = dsets[train_path].classes
-print ('classes'+str(dset_classes))
+dset_classes = dsets[train_path].class_to_idx
+print('classes' + str(dset_classes))
 use_gpu = torch.cuda.is_available()
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 train_loader = CVDataLoader()
-train_loader.initialize(dsets[train_path],dsets[val_path],batch_size)
+train_loader.initialize(dsets[train_path], dsets[val_path], batch_size)
 dataset = train_loader.load_data()
 test_loader = CVDataLoader()
-opt= args
-test_loader.initialize(dsets[train_path],dsets[val_path],batch_size,shuffle=True)
+opt = args
+test_loader.initialize(dsets[train_path], dsets[val_path], batch_size, shuffle=True)
 dataset_test = test_loader.load_data()
-option = 'resnet'+args.resnet
+option = 'resnet' + args.resnet
 G = ResBase(option)
 F1 = ResClassifier(num_layer=num_layer)
 F2 = ResClassifier(num_layer=num_layer)
@@ -99,15 +101,15 @@ if args.cuda:
     F1.cuda()
     F2.cuda()
 if args.optimizer == 'momentum':
-    optimizer_g = optim.SGD(list(G.features.parameters()), lr=args.lr,weight_decay=0.0005)
-    optimizer_f = optim.SGD(list(F1.parameters())+list(F2.parameters()),momentum=0.9,lr=args.lr,weight_decay=0.0005)
+    optimizer_g = optim.SGD(list(G.features.parameters()), lr=args.lr, weight_decay=0.0005)
+    optimizer_f = optim.SGD(list(F1.parameters()) + list(F2.parameters()), momentum=0.9, lr=args.lr, weight_decay=0.0005)
 elif args.optimizer == 'adam':
-    optimizer_g = optim.Adam(G.features.parameters(), lr=args.lr,weight_decay=0.0005)
-    optimizer_f = optim.Adam(list(F1.parameters())+list(F2.parameters()), lr=args.lr,weight_decay=0.0005)
+    optimizer_g = optim.Adam(G.features.parameters(), lr=args.lr, weight_decay=0.0005)
+    optimizer_f = optim.Adam(list(F1.parameters()) + list(F2.parameters()), lr=args.lr, weight_decay=0.0005)
 else:
-    optimizer_g = optim.Adadelta(G.features.parameters(),lr=args.lr,weight_decay=0.0005)
-    optimizer_f = optim.Adadelta(list(F1.parameters())+list(F2.parameters()),lr=args.lr,weight_decay=0.0005)    
-    
+    optimizer_g = optim.Adadelta(G.features.parameters(), lr=args.lr, weight_decay=0.0005)
+    optimizer_f = optim.Adadelta(list(F1.parameters()) + list(F2.parameters()), lr=args.lr, weight_decay=0.0005)
+
 def train(num_epoch):
     criterion = nn.CrossEntropyLoss().cuda()
     for ep in range(num_epoch):
@@ -120,30 +122,34 @@ def train(num_epoch):
             if args.cuda:
                 data1 = data['S']
                 target1 = data['S_label']
-                data2  = data['T']
+                data2 = data['T']
                 target2 = data['T_label']
                 data1, target1 = data1.cuda(), target1.cuda()
                 data2, target2 = data2.cuda(), target2.cuda()
-            # when pretraining network source only
+            ## when pretraining network source only
             eta = 1.0
-            data = Variable(torch.cat((data1,data2),0))
+            ## cat source and target data by rows, datasize = (2*batch_size)rows * (data_length)cols
+            data = Variable(torch.cat((data1, data2), 0))
             target1 = Variable(target1)
-            # Step A train all networks to minimize loss on source
+
+            ## Step A train all networks to minimize loss on source
             optimizer_g.zero_grad()
             optimizer_f.zero_grad()
             output = G(data)
             output1 = F1(output)
             output2 = F2(output)
 
-            output_s1 = output1[:batch_size,:]
-            output_s2 = output2[:batch_size,:]
-            output_t1 = output1[batch_size:,:]
-            output_t2 = output2[batch_size:,:]
-            output_t1 = F.softmax(output_t1)
-            output_t2 = F.softmax(output_t2)
+            ## source : row from 0 to batch_size
+            output_s1 = output1[:batch_size, :]
+            output_s2 = output2[:batch_size, :]
+            ## target : row from batch_size to 2*batch_size
+            output_t1 = output1[batch_size:, :]
+            output_t2 = output2[batch_size:, :]
+            output_t1 = F.softmax(output_t1, dim=1)
+            output_t2 = F.softmax(output_t2, dim=1)
 
-            entropy_loss = - torch.mean(torch.log(torch.mean(output_t1,0)+1e-6))
-            entropy_loss -= torch.mean(torch.log(torch.mean(output_t2,0)+1e-6))
+            entropy_loss = - torch.mean(torch.log(torch.mean(output_t1, 0) + 1e-6))
+            entropy_loss -= torch.mean(torch.log(torch.mean(output_t2, 0) + 1e-6))
 
             loss1 = criterion(output_s1, target1)
             loss2 = criterion(output_s2, target1)
@@ -152,58 +158,61 @@ def train(num_epoch):
             optimizer_g.step()
             optimizer_f.step()
 
-            #Step B train classifier to maximize discrepancy
+            ## Step B train classifier to maximize discrepancy
             optimizer_g.zero_grad()
             optimizer_f.zero_grad()
 
             output = G(data)
             output1 = F1(output)
             output2 = F2(output)
-            output_s1 = output1[:batch_size,:]
-            output_s2 = output2[:batch_size,:]
-            output_t1 = output1[batch_size:,:]
-            output_t2 = output2[batch_size:,:]
-            output_t1 = F.softmax(output_t1)
-            output_t2 = F.softmax(output_t2)
+            output_s1 = output1[:batch_size, :]
+            output_s2 = output2[:batch_size, :]
+            output_t1 = output1[batch_size:, :]
+            output_t2 = output2[batch_size:, :]
+            output_t1 = F.softmax(output_t1, dim=1)
+            output_t2 = F.softmax(output_t2, dim=1)
             loss1 = criterion(output_s1, target1)
             loss2 = criterion(output_s2, target1)
-            entropy_loss = - torch.mean(torch.log(torch.mean(output_t1,0)+1e-6))
-            entropy_loss -= torch.mean(torch.log(torch.mean(output_t2,0)+1e-6))
-            loss_dis = torch.mean(torch.abs(output_t1-output_t2))
-            F_loss = loss1 + loss2 - eta*loss_dis  + 0.01 * entropy_loss
+            entropy_loss = - torch.mean(torch.log(torch.mean(output_t1, 0) + 1e-6))
+            entropy_loss -= torch.mean(torch.log(torch.mean(output_t2, 0) + 1e-6))
+            loss_dis = torch.mean(torch.abs(output_t1 - output_t2))
+            F_loss = loss1 + loss2 - eta * loss_dis + 0.01 * entropy_loss
             F_loss.backward()
             optimizer_f.step()
-            # Step C train genrator to minimize discrepancy
+
+            ## Step C train genrator to minimize discrepancy
             for i in range(num_k):
                 optimizer_g.zero_grad()
                 output = G(data)
                 output1 = F1(output)
                 output2 = F2(output)
 
-                output_s1 = output1[:batch_size,:]
-                output_s2 = output2[:batch_size,:]
-                output_t1 = output1[batch_size:,:]
-                output_t2 = output2[batch_size:,:]
+                output_s1 = output1[:batch_size, :]
+                output_s2 = output2[:batch_size, :]
+                output_t1 = output1[batch_size:, :]
+                output_t2 = output2[batch_size:, :]
 
                 loss1 = criterion(output_s1, target1)
                 loss2 = criterion(output_s2, target1)
-                output_t1 = F.softmax(output_t1)
-                output_t2 = F.softmax(output_t2)
-                loss_dis = torch.mean(torch.abs(output_t1-output_t2))
-                entropy_loss = -torch.mean(torch.log(torch.mean(output_t1,0)+1e-6))
-                entropy_loss -= torch.mean(torch.log(torch.mean(output_t2,0)+1e-6))
+                output_t1 = F.softmax(output_t1, dim=1)
+                output_t2 = F.softmax(output_t2, dim=1)
+                loss_dis = torch.mean(torch.abs(output_t1 - output_t2))
+                entropy_loss = -torch.mean(torch.log(torch.mean(output_t1, 0) + 1e-6))
+                entropy_loss -= torch.mean(torch.log(torch.mean(output_t2, 0) + 1e-6))
 
                 loss_dis.backward()
                 optimizer_g.step()
             if batch_idx % args.log_interval == 0:
-                print('Train Ep: {} [{}/{} ({:.0f}%)]\tLoss1: {:.6f}\tLoss2: {:.6f}\t Dis: {:.6f} Entropy: {:.6f}'.format(
-                    ep, batch_idx * len(data), 70000,
-                    100. * batch_idx / 70000, loss1.data[0],loss2.data[0],loss_dis.data[0],entropy_loss.data[0]))
-            if batch_idx == 1 and ep >1:
+                print(
+                    'Train Ep: {} [{}/{} ({:.0f}%)]\tLoss1: {:.6f}\tLoss2: {:.6f}\t Dis: {:.6f} Entropy: {:.6f}'.format(
+                        ep, batch_idx * len(data), 70000,
+                            100. * batch_idx / 70000, loss1.item(), loss2.item(), loss_dis.item(), entropy_loss.item()))
+            if batch_idx == 1:  # and ep >1:
                 test(ep)
                 G.train()
                 F1.train()
                 F2.train()
+
 
 def test(epoch):
     val = False;
@@ -213,42 +222,71 @@ def test(epoch):
     test_loss = 0
     correct = 0
     correct2 = 0
+    correct_by_class = np.zeros(len(dset_classes))
+    correct_by_class2 = np.zeros(len(dset_classes))
+    num_by_class = np.zeros(len(dset_classes))
     size = 0
 
     for batch_idx, data in enumerate(dataset_test):
-        if batch_idx*batch_size > 5000:
+        if batch_idx * batch_size > 5000:
             break
         if args.cuda:
-            data2  = data['T']
+            data2 = data['T']
             target2 = data['T_label']
             if val:
-                data2  = data['S']
+                data2 = data['S']
                 target2 = data['S_label']
             data2, target2 = data2.cuda(), target2.cuda()
-        data1, target1 = Variable(data2, volatile=True), Variable(target2)
+        with torch.no_grad():
+            data1 = Variable(data2)
+        target1 = Variable(target2)
+        ## label
+        np_label = target1.data.cpu().numpy()
         output = G(data1)
         output1 = F1(output)
         output2 = F2(output)
-        test_loss += F.nll_loss(output1, target1).data[0]
-        pred = output1.data.max(1)[1] # get the index of the max log-probability
+        test_loss += F.nll_loss(output1, target1).item()
+        ## pred1
+        pred = output1.data.max(1)[1]  # get the index of the max log-probability
+        np_pred = pred.cpu().numpy()
         correct += pred.eq(target1.data).cpu().sum()
-        pred = output2.data.max(1)[1] # get the index of the max log-probability
-        k = target1.data.size()[0]
+        ## pred2
+        pred = output2.data.max(1)[1]  # get the index of the max log-probability
+        np_pred2 = pred.cpu().numpy()
         correct2 += pred.eq(target1.data).cpu().sum()
-
+        ## calc nums by class
+        for i in range(len(np_label)):
+            num_by_class[np_label[i]] += 1
+            if np_label[i] == np_pred[i]:
+                correct_by_class[np_label[i]] += 1
+            if np_label[i] == np_pred2[i]:
+                correct_by_class2[np_label[i]] += 1
+        # print('num_by_class:', num_by_class)
+        # print('correct_by_class:', correct_by_class)
+        # print('correct_by_class2:', correct_by_class2)
+        k = target1.data.size()[0]
         size += k
     test_loss = test_loss
-    test_loss /= len(test_loader) # loss function already averages over batch size
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%) ({:.0f}%)\n'.format(
-        test_loss, correct, size,
-        100. * correct / size,100.*correct2/size))
-    #if 100. * correct / size > 67 or 100. * correct2 / size > 67:
-    value = max(100. * correct / size,100. * correct2 / size)
+    print('Accuracy by class:\nF1', correct_by_class / num_by_class,
+          '\nF2:', correct_by_class2 / num_by_class)
+    # test_loss /= len(test_loader) # loss function already averages over batch size
+    # print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%) ({:.0f}%)\n'.format(
+    #     test_loss, correct, size,
+    #     100. * correct / size,100.*correct2/size))
+    print('\nTest set: test_loss: {:.4f}, Accuracy: F1:{}/{} ({:.0f}%) F2:{}/{} ({:.0f}%)\n'.format(
+        test_loss,
+        correct, size,
+        100. * correct / size,
+        correct2, size,
+        100. * correct2 / size
+    ))
+    # if 100. * correct / size > 67 or 100. * correct2 / size > 67:
+    value = max(100. * correct / size, 100. * correct2 / size)
     if not val and value > 60:
-        torch.save(F1.state_dict(), save_path+'_'+args.resnet+'_'+str(value)+'_'+'F1.pth')
-        torch.save(F2.state_dict(), save_path+'_'+args.resnet+'_'+str(value)+'_'+'F2.pth')
-        torch.save(G.state_dict(), save_path+'_'+args.resnet+'_'+str(value)+'_'+'G.pth')
+        torch.save(F1.state_dict(), save_path + '/mcd_' + args.resnet + '_' + str(value) + '_' + 'F1.pth')
+        torch.save(F2.state_dict(), save_path + '/mcd_' + args.resnet + '_' + str(value) + '_' + 'F2.pth')
+        torch.save(G.state_dict(), save_path + '/mcd_' + args.resnet + '_' + str(value) + '_' + 'G.pth')
 
 
-#for epoch in range(1, args.epochs + 1):
-train(args.epochs+1)
+# for epoch in range(1, args.epochs + 1):
+train(args.epochs + 1)
