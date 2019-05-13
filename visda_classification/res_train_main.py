@@ -57,7 +57,7 @@ num_layer = args.num_layer
 batch_size = args.batch_size
 if not os.path.exists(args.save):
     os.mkdir(args.save)
-save_path = args.save + '_' + str(args.num_k)
+save_path = args.save + '/' + str(args.num_k)
 data_transforms = {
     train_path: transforms.Compose([
         transforms.Resize(256),
@@ -283,9 +283,9 @@ def test(epoch):
     # if 100. * correct / size > 67 or 100. * correct2 / size > 67:
     value = max(100. * correct / size, 100. * correct2 / size)
     if not val and value > 60:
-        torch.save(F1.state_dict(), save_path + '/mcd_' + args.resnet + '_' + str(value) + '_' + 'F1.pth')
-        torch.save(F2.state_dict(), save_path + '/mcd_' + args.resnet + '_' + str(value) + '_' + 'F2.pth')
-        torch.save(G.state_dict(), save_path + '/mcd_' + args.resnet + '_' + str(value) + '_' + 'G.pth')
+        torch.save(F1.state_dict(), save_path + '_mcd_' + args.resnet + '_' + str(value) + '_' + 'F1.pth')
+        torch.save(F2.state_dict(), save_path + '_mcd_' + args.resnet + '_' + str(value) + '_' + 'F2.pth')
+        torch.save(G.state_dict(), save_path + '_mcd_' + args.resnet + '_' + str(value) + '_' + 'G.pth')
 
 
 # for epoch in range(1, args.epochs + 1):
