@@ -170,7 +170,7 @@ class Solver(object):
             kernels2 = self.guassian_kernel(output_s2, output_t2)
             tmploss1 = 0
             tmploss2 = 0
-            trade_off = 0.5
+            trade_off = 0
             for i in range(batch_size):
                 s1, s2 = i, (i + 1) % batch_size
                 t1, t2 = s1 + batch_size, s2 + batch_size
