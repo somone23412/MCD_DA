@@ -200,7 +200,7 @@ class Solver(object):
                 self.reset_grad()
 
             ## max iterations per one epoch
-            if batch_idx > 500:
+            if batch_idx > 13:
                 return batch_idx
 
             ## print log info
@@ -277,7 +277,47 @@ class Solver(object):
         correct2 = 0
         correct3 = 0
         size = 0
+
         for batch_idx, data in enumerate(self.dataset_test):
+            if data['S'].size()[0] < self.batch_size:
+                break
+            img = data['S']
+            label = data['S_label']
+            img, label = img.cuda(), label.long().cuda()
+            with torch.no_grad():
+                img = Variable(img)
+            label = Variable(label)
+            feat = self.G(img)
+            output1 = self.C1(feat)
+            output2 = self.C2(feat)
+            test_loss += F.nll_loss(output1, label).item()
+            output_ensemble = output1 + output2
+            pred1 = output1.data.max(1)[1]
+            pred2 = output2.data.max(1)[1]
+            pred_ensemble = output_ensemble.data.max(1)[1]
+            k = label.data.size()[0]
+            correct1 += pred1.eq(label.data).cpu().sum()
+            correct2 += pred2.eq(label.data).cpu().sum()
+            correct3 += pred_ensemble.eq(label.data).cpu().sum()
+            size += k
+
+        test_loss = test_loss / size
+        print(
+            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            '\tTest set(Source): Average loss: {:.4f}, Accuracy C1: {}/{} ({:.0f}%) Accuracy C2: {}/{} ({:.0f}%) Accuracy Ensemble: {}/{} ({:.0f}%)'.format(
+                test_loss, correct1, size,
+                100. * correct1 / size, correct2, size, 100. * correct2 / size, correct3, size, 100. * correct3 / size))
+
+        test_loss = 0
+        correct1 = 0
+        correct2 = 0
+        correct3 = 0
+        size = 0
+
+        for batch_idx, data in enumerate(self.dataset_test):
+            if data['T'].size()[0] < self.batch_size:
+                break
+            # print(data['T'].shape, data['T_label'].shape)
             img = data['T']
             label = data['T_label']
             img, label = img.cuda(), label.long().cuda()
@@ -301,7 +341,7 @@ class Solver(object):
         test_loss = test_loss / size
         print(
             datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            '\tTest set: Average loss: {:.4f}, Accuracy C1: {}/{} ({:.0f}%) Accuracy C2: {}/{} ({:.0f}%) Accuracy Ensemble: {}/{} ({:.0f}%)'.format(
+            '\tTest set(Target): Average loss: {:.4f}, Accuracy C1: {}/{} ({:.0f}%) Accuracy C2: {}/{} ({:.0f}%) Accuracy Ensemble: {}/{} ({:.0f}%)'.format(
                 test_loss, correct1, size,
                 100. * correct1 / size, correct2, size, 100. * correct2 / size, correct3, size, 100. * correct3 / size))
 
