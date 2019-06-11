@@ -8,7 +8,9 @@ import os
 parser = argparse.ArgumentParser(description='PyTorch MCD Implementation')
 parser.add_argument('--all_use', type=str, default='no', metavar='N',
                     help='use all training data? in usps adaptation')
-parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+# parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+#                     help='input batch size for training (default: 64)')
+parser.add_argument('--batch-size', type=int, default=16, metavar='N',
                     help='input batch size for training (default: 64)')
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint', metavar='N',
                     help='source only or not')
@@ -33,9 +35,9 @@ parser.add_argument('--save_model', action='store_true', default=False,
                     help='save_model or not')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-parser.add_argument('--source', type=str, default='mnist', metavar='N',
+parser.add_argument('--source', type=str, default='visda', metavar='N',
                     help='source dataset')
-parser.add_argument('--target', type=str, default='usps', metavar='N', help='target dataset')
+parser.add_argument('--target', type=str, default='visda', metavar='N', help='target dataset')
 parser.add_argument('--use_abs_diff', action='store_true', default=False,
                     help='use absolute difference value as a measurement')
 parser.add_argument('--gpu_id', type=str, nargs='?', default='0', help="device id to run")

@@ -200,7 +200,7 @@ class Solver(object):
                 self.reset_grad()
 
             ## max iterations per one epoch
-            if batch_idx > 13:
+            if batch_idx > 500:
                 return batch_idx
 
             ## print log info
