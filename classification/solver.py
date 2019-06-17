@@ -279,7 +279,7 @@ class Solver(object):
         size = 0
 
         for batch_idx, data in enumerate(self.dataset_test):
-            if data['S'].size()[0] < self.batch_size:
+            if data['S'].size()[0] < self.batch_size or batch_idx * self.batch_size > 5000:
                 break
             img = data['S']
             label = data['S_label']
@@ -315,7 +315,7 @@ class Solver(object):
         size = 0
 
         for batch_idx, data in enumerate(self.dataset_test):
-            if data['T'].size()[0] < self.batch_size:
+            if data['T'].size()[0] < self.batch_size or batch_idx * self.batch_size > 5000:
                 break
             # print(data['T'].shape, data['T_label'].shape)
             img = data['T']

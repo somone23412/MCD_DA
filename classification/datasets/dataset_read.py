@@ -8,7 +8,7 @@ from datasets.usps import load_usps
 from datasets.gtsrb import load_gtsrb
 from datasets.synth_traffic import load_syntraffic
 from datasets.visda import load_visda
-
+from datasets.office31 import load_office
 import torchvision.transforms as transforms
 from datasets.dataset import Dataset
 
@@ -48,8 +48,11 @@ def dataset_read(source, target, batch_size, scale=False, all_use='no'):
     S_test = {}
     T = {}
     T_test = {}
-    if source == 'visda':
-        S, T = load_visda()
+    if source == 'visda' or source == 'office':
+        if source == 'visda':
+            S, T = load_visda()
+        if source == 'office':
+            S, T = load_office()
         S_test = S
         T_test = T
     else:

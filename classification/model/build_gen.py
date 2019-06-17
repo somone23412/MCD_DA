@@ -5,7 +5,7 @@ from model import visda_model
 ## where is that?
 # import syndig2svhn
 
-def Generator(source, target, pixelda=False, resnet_arg='101'):
+def Generator(source, target, pixelda=False):
     if source == 'usps' or target == 'usps':
         return usps_model.Feature()
     elif source == 'svhn' or target == 'svhn':
@@ -13,7 +13,10 @@ def Generator(source, target, pixelda=False, resnet_arg='101'):
     elif source == 'synth':
         return syn2gtrsb.Feature()
     elif source == 'visda':
-        option = 'resnet' + resnet_arg
+        option = 'resnet' + '101'
+        return visda_model.ResBase(option)
+    elif source == 'office':
+        option = 'resnet' + '101'
         return visda_model.ResBase(option)
 
 
@@ -27,6 +30,9 @@ def Classifier(source, target, num_layer=2):
         return syn2gtrsb.Predictor()
     if source == 'visda':
         Predictor = visda_model.ResClassifier(num_layer=num_layer)
+        Predictor.apply(visda_model.weights_init)
+    if source == 'office':
+        Predictor = visda_model.ResClassifier(num_classes=31, num_layer=num_layer)
         Predictor.apply(visda_model.weights_init)
         return Predictor
 
